@@ -19,7 +19,7 @@ function parseAllowedUserIds(userIdsStr: string): number[] {
 export function loadConfig(): BotConfig {
   return {
     telegramToken: getEnvVariable('TELEGRAM_BOT_TOKEN'),
-    chatId: getEnvVariable('TELEGRAM_CHAT_ID'),
+    chatId: getEnvVariable('TELEGRAM_CHAT_ID', false), // Optional - bot works in any chat
     allowedUserIds: parseAllowedUserIds(getEnvVariable('ALLOWED_USER_IDS', false)),
     checkIntervalMinutes: parseInt(getEnvVariable('CHECK_INTERVAL_MINUTES', false) || '15', 10),
     minProbabilityThreshold: parseInt(getEnvVariable('MIN_PROBABILITY_THRESHOLD', false) || '70', 10),

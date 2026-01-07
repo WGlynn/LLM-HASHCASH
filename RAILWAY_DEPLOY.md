@@ -37,15 +37,16 @@ In the Railway dashboard:
 
 1. Click on your deployed project
 2. Go to **"Variables"** tab
-3. Click **"+ New Variable"** and add these:
+3. Click **"+ New Variable"** and add these **4 variables**:
 
 ```
 TELEGRAM_BOT_TOKEN = 8513505274:AAGXiF3RJnc8Fltgzha7SB6oc-OTjFoy3ck
-TELEGRAM_CHAT_ID = 8366932263
 ALLOWED_USER_IDS = 8366932263
 CHECK_INTERVAL_MINUTES = 15
 MIN_PROBABILITY_THRESHOLD = 70
 ```
+
+**Note:** `TELEGRAM_CHAT_ID` is no longer needed! The bot now works in any chat you add it to (private chats and groups).
 
 4. Click **"Save"** or **"Deploy"**
 
@@ -62,10 +63,21 @@ MIN_PROBABILITY_THRESHOLD = 70
 
 ### Step 5: Test in Telegram
 
+**Private Chat:**
 1. Open Telegram
 2. Find **@AgarthaKirkBot**
 3. Send: `/start`
 4. **Bot responds!** ✅
+
+**Group Chat (NEW!):**
+1. Create or open a Telegram group
+2. Click group name → **"Add Members"**
+3. Search for **@AgarthaKirkBot** and add it
+4. Bot sends automatic welcome message ✅
+5. Send `/start` in the group to test
+6. Alerts will now be sent to BOTH private chat and group!
+
+See **GROUP_CHAT_GUIDE.md** for full group chat documentation.
 
 ---
 

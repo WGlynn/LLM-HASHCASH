@@ -37,16 +37,21 @@ In the Railway dashboard:
 
 1. Click on your deployed project
 2. Go to **"Variables"** tab
-3. Click **"+ New Variable"** and add these **4 variables**:
+3. Click **"+ New Variable"** and add these **3 required variables**:
 
 ```
 TELEGRAM_BOT_TOKEN = 8513505274:AAGXiF3RJnc8Fltgzha7SB6oc-OTjFoy3ck
-ALLOWED_USER_IDS = 8366932263
 CHECK_INTERVAL_MINUTES = 15
 MIN_PROBABILITY_THRESHOLD = 70
 ```
 
-**Note:** `TELEGRAM_CHAT_ID` is no longer needed! The bot now works in any chat you add it to (private chats and groups).
+**Optional - For Public Access:**
+- Leave `ALLOWED_USER_IDS` empty or don't add it → **Anyone can use the bot** ✅
+
+**Optional - For Restricted Access:**
+- Add `ALLOWED_USER_IDS = 8366932263,123456789` → Only specified users can use commands
+
+**Note:** `TELEGRAM_CHAT_ID` is no longer needed! The bot works in any chat you add it to (private chats and groups).
 
 4. Click **"Save"** or **"Deploy"**
 

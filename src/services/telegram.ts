@@ -21,11 +21,11 @@ export class TelegramService {
   }
 
   private isAuthorized(userId: number): boolean {
-    // If no allowed users specified, allow all (not recommended for production)
+    // Public access mode - allow everyone
     if (this.config.allowedUserIds.length === 0) {
-      Logger.warn('No allowed user IDs configured - accepting all users');
       return true;
     }
+    // Restricted mode - only allow specified users
     return this.config.allowedUserIds.includes(userId);
   }
 
@@ -34,13 +34,6 @@ export class TelegramService {
     this.bot.on('message', (msg) => {
       // Track this chat
       this.activeChats.add(msg.chat.id);
-
-      const userId = msg.from?.id;
-      if (!userId || !this.isAuthorized(userId)) {
-        Logger.warn(`Unauthorized access attempt from user ${userId} in chat ${msg.chat.id}`);
-        this.bot.sendMessage(msg.chat.id, '⛔ Unauthorized access. This bot is private.');
-        return;
-      }
     });
 
     // Welcome message for group chats
@@ -68,7 +61,7 @@ I'll monitor Pump.fun tokens and alert here when I find high-probability opportu
 /status - Check bot status
 /scan - Run immediate scan
 
-Only authorized users can use commands.
+Everyone can use this bot!
         `;
 
         this.bot.sendMessage(msg.chat.id, welcomeMessage, { parse_mode: 'Markdown' });

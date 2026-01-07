@@ -8,9 +8,20 @@
     "start": "npm run build && node dist/index.js",
     "dev": "ts-node src/index.ts",
     "watch": "tsc -w",
-    "test": "ts-node src/test-bot-logic.ts"
+    "test": "ts-node src/test-bot-logic.ts",
+    "demo:antiscam": "node src/demo/antiscam-demo.js",
+    "demo:persistence": "node src/demo/persistence-demo.js",
+    "demo:challenge-ui": "node src/demo/challenge-ui-demo.js"
+    ,"demo:simulate": "node src/demo/challenge-sim.js"
+      ,"demo:simulate": "node src/demo/simulate-demo.js"
+    ,"test:challenges": "node src/tests/challenges.test.js"
   },
-  "keywords": ["telegram", "crypto", "pumpfun", "trading"],
+  "keywords": [
+    "telegram",
+    "crypto",
+    "pumpfun",
+    "trading"
+  ],
   "author": "",
   "license": "MIT",
   "dependencies": {

@@ -3,6 +3,7 @@ import { Logger } from './utils/logger';
 import { TelegramService } from './services/telegram';
 import { AlertService } from './services/alerter';
 import { TokenScanner } from './services/scanner';
+import { startNotifyServer } from './services/notify';
 
 async function main() {
   try {
@@ -68,6 +69,15 @@ async function main() {
 
     // Start monitoring
     await scanner.startMonitoring();
+
+    // Start optional notify HTTP server for RPC-style notifications
+    try {
+      const port = process.env.NOTIFY_PORT ? Number(process.env.NOTIFY_PORT) : 3001;
+      const token = process.env.NOTIFY_TOKEN;
+      startNotifyServer(port, token);
+    } catch (err) {
+      Logger.warn('Failed to start notify server', err as any);
+    }
 
     Logger.info('Bot is now running. Press Ctrl+C to stop.');
 

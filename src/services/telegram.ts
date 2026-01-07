@@ -1,16 +1,20 @@
 import TelegramBot from 'node-telegram-bot-api';
 import { BotConfig } from '../types';
 import { Logger } from '../utils/logger';
+import AntiScamGate from './antiScam';
 
 export class TelegramService {
   private bot: TelegramBot;
   private config: BotConfig;
   private activeChats: Set<number>;
+  private antiScam: AntiScamGate;
 
   constructor(config: BotConfig) {
     this.config = config;
     this.bot = new TelegramBot(config.telegramToken, { polling: true });
     this.activeChats = new Set();
+    // Initialize AntiScamGate with allowed users as trusted senders
+    this.antiScam = new AntiScamGate(config.allowedUserIds.map(String));
 
     // Add the configured chat ID if provided
     if (config.chatId) {
@@ -34,6 +38,32 @@ export class TelegramService {
     this.bot.on('message', (msg) => {
       // Track this chat
       this.activeChats.add(msg.chat.id);
+
+      // Gate private messages through AntiScam
+      try {
+        if (msg.chat.type === 'private' && msg.from && msg.text) {
+          const senderId = String(msg.from.id);
+          const decision = this.antiScam.handleIncoming(senderId, msg.text);
+          if (decision.status === 'accepted') {
+            // Generate async summary via LLM then forward
+            this.antiScam.produceSummary(msg.text).then((summary) => {
+              const forward = `*Message from ${msg.from.first_name || senderId}*: ${summary}\n\n${msg.text}`;
+              this.sendMessage(forward);
+            }).catch((e) => {
+              const forward = `*Message from ${msg.from.first_name || senderId}*: ${decision.summary}\n\n${msg.text}`;
+              this.sendMessage(forward);
+            });
+          } else if (decision.status === 'challenge') {
+            const c = decision.challenge;
+            const instruct = decision.prompt ? decision.prompt : `To contact this account, please perform the required challenge (id: ${c.id}) and reply with /resp ${c.id} <answer>`;
+            this.bot.sendMessage(msg.chat.id, instruct);
+          } else if (decision.status === 'rejected') {
+            this.bot.sendMessage(msg.chat.id, `Message rejected: ${decision.reason}`);
+          }
+        }
+      } catch (e) {
+        Logger.error('AntiScam handling failed', e);
+      }
     });
 
     // Welcome message for group chats
@@ -96,6 +126,66 @@ Bot is running in ${chatType} mode and will send alerts automatically.
       `;
 
       this.bot.sendMessage(msg.chat.id, welcomeMessage, { parse_mode: 'Markdown' });
+    });
+
+    // Handle PoW response: /pow <challengeId> <nonce>
+    this.bot.onText(/\/pow\s+(\S+)\s+(\S+)/, async (msg, match) => {
+      if (!msg.from) return;
+      const senderId = String(msg.from.id);
+      const challengeId = match && match[1];
+      const nonce = match && match[2];
+      if (!challengeId || !nonce) return;
+      const res = await this.antiScam.respondWithPow(senderId, challengeId, nonce);
+      if (res.status === 'accepted') {
+        const forward = `*Message from ${msg.from.first_name || senderId}*: ${res.summary}`;
+        this.sendMessage(forward);
+        this.bot.sendMessage(msg.chat.id, '✅ Proof-of-work accepted — your message was forwarded.');
+      } else {
+        this.bot.sendMessage(msg.chat.id, `❌ PoW rejected: ${res.reason}`);
+      }
+    });
+
+    // Payment request: /pay -> returns a demo token; /payok <token> to confirm
+    this.bot.onText(/\/pay$/, (msg) => {
+      if (!msg.from) return;
+      const senderId = String(msg.from.id);
+      const token = this.antiScam.createPaymentRequest(senderId);
+      this.bot.sendMessage(msg.chat.id, `To pay for attention (demo), use token: ${token}\nAfter paying, reply with /payok ${token}`);
+    });
+
+    this.bot.onText(/\/payok\s+(\S+)/, async (msg, match) => {
+      if (!msg.from) return;
+      const senderId = String(msg.from.id);
+      const token = match && match[1];
+      if (!token) return;
+      const res = await this.antiScam.respondWithPayment(senderId, token);
+      if (res.status === 'accepted') {
+        const forward = `*Message from ${msg.from.first_name || senderId}*: ${res.summary}`;
+        this.sendMessage(forward);
+        this.bot.sendMessage(msg.chat.id, '✅ Payment accepted — your message was forwarded.');
+      } else {
+        this.bot.sendMessage(msg.chat.id, `❌ Payment rejected: ${res.reason}`);
+      }
+    });
+
+    // Generic challenge response: /resp <challengeId> <answer...>
+    this.bot.onText(/\/resp\s+(\S+)\s+([\s\S]+)/, async (msg, match) => {
+      if (!msg.from) return;
+      const senderId = String(msg.from.id);
+      const challengeId = match && match[1];
+      const answer = match && match[2];
+      if (!challengeId || !answer) return;
+      const res = await this.antiScam.respondWithAnswer(senderId, challengeId, answer.trim());
+      if (res.status === 'accepted') {
+        const forward = `*Message from ${msg.from.first_name || senderId}*: ${res.summary}`;
+        this.sendMessage(forward);
+        this.bot.sendMessage(msg.chat.id, '✅ Challenge accepted — your message was forwarded.');
+      } else if (res.status === 'challenge') {
+        const c = res.challenge;
+        this.bot.sendMessage(msg.chat.id, `Next challenge issued: id=${c.id} payload=${c.prefix}`);
+      } else {
+        this.bot.sendMessage(msg.chat.id, `❌ Response rejected: ${res.reason}`);
+      }
     });
 
     this.bot.onText(/\/status/, (msg) => {

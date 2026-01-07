@@ -1,0 +1,27 @@
+{
+  "name": "pumpfun-telegram-bot",
+  "version": "1.0.0",
+  "description": "Secure Telegram bot for cryptocurrency opportunity analysis",
+  "main": "dist/index.js",
+  "scripts": {
+    "build": "tsc",
+    "start": "node dist/index.js",
+    "dev": "ts-node src/index.ts",
+    "watch": "tsc -w"
+  },
+  "keywords": ["telegram", "crypto", "pumpfun", "trading"],
+  "author": "",
+  "license": "MIT",
+  "dependencies": {
+    "node-telegram-bot-api": "^0.66.0",
+    "axios": "^1.6.5",
+    "dotenv": "^16.3.1",
+    "node-cache": "^5.1.2"
+  },
+  "devDependencies": {
+    "@types/node": "^20.10.6",
+    "@types/node-telegram-bot-api": "^0.64.0",
+    "typescript": "^5.3.3",
+    "ts-node": "^10.9.2"
+  }
+}

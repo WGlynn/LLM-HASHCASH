@@ -9,8 +9,8 @@ async function main() {
     Logger.info('Starting Pump.fun Trading Bot...');
 
     // Validate configuration
-    if (!config.telegramToken || !config.chatId) {
-      throw new Error('Missing required environment variables. Check your .env file.');
+    if (!config.telegramToken) {
+      throw new Error('Missing required environment variable: TELEGRAM_BOT_TOKEN');
     }
 
     // Initialize services
@@ -52,8 +52,18 @@ async function main() {
         return;
       }
 
-      await telegram.sendMessage('🔍 Starting manual scan...');
+      await telegram.getBot().sendMessage(msg.chat.id, '🔍 Starting manual scan...', { parse_mode: 'Markdown' });
       await scanner.runScan();
+    });
+
+    // Register test command
+    telegram.getBot().onText(/\/test/, async (msg) => {
+      const userId = msg.from?.id || 0;
+      if (config.allowedUserIds.length > 0 && !config.allowedUserIds.includes(userId)) {
+        return;
+      }
+
+      await telegram.testConnections(msg.chat.id);
     });
 
     // Start monitoring

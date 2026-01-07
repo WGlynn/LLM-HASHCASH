@@ -60,6 +60,7 @@ I'll monitor Pump.fun tokens and alert here when I find high-probability opportu
 /start - Show help message
 /status - Check bot status
 /scan - Run immediate scan
+/test - Test API connections
 
 Everyone can use this bot!
         `;
@@ -89,6 +90,7 @@ I monitor Pump.fun tokens and alert you to high-probability opportunities.
 /start - Show this message
 /status - Check bot status
 /scan - Run immediate scan
+/test - Test API connections
 
 Bot is running in ${chatType} mode and will send alerts automatically.
       `;
@@ -112,6 +114,88 @@ Active chats: ${this.activeChats.size}
     });
 
     Logger.info('Telegram bot handlers configured');
+  }
+
+  async testConnections(chatId: number): Promise<void> {
+    try {
+      await this.bot.sendMessage(chatId, '🧪 *Testing API Connections...*', { parse_mode: 'Markdown' });
+
+      // Import services dynamically
+      const { PumpfunService } = await import('./pumpfun');
+      const { MacroAnalyzer } = await import('../analyzers/macro');
+      const { DexScreenerService } = await import('./dexscreener');
+
+      const pumpfunService = new PumpfunService();
+      const macroAnalyzer = new MacroAnalyzer();
+      const dexScreener = new DexScreenerService();
+
+      let results: string[] = [];
+
+      // Test 1: Pump.fun API
+      try {
+        const tokens = await pumpfunService.getRecentTokens(1);
+        if (tokens.length > 0) {
+          const token = tokens[0];
+          results.push(`✅ *Pump.fun API:* Connected`);
+          results.push(`   Latest token: ${token.symbol}`);
+          results.push(`   Name: ${token.name}`);
+          results.push(`   Created: ${token.createdAt.toLocaleDateString()}`);
+        } else {
+          results.push(`⚠️ *Pump.fun API:* Connected but no tokens found`);
+        }
+      } catch (error) {
+        results.push(`❌ *Pump.fun API:* Failed to connect`);
+        Logger.error('Pump.fun test failed', error);
+      }
+
+      // Test 2: CoinGecko (Macro data)
+      try {
+        const macro = await macroAnalyzer.fetchMacroData();
+        if (macro.btcPrice > 0) {
+          results.push(`✅ *CoinGecko API:* Connected`);
+          results.push(`   BTC: $${macro.btcPrice.toFixed(0)} (${macro.btcChange24h.toFixed(2)}%)`);
+          results.push(`   ETH: $${macro.ethPrice.toFixed(0)} (${macro.ethChange24h.toFixed(2)}%)`);
+        } else {
+          results.push(`⚠️ *CoinGecko API:* No data received`);
+        }
+      } catch (error) {
+        results.push(`❌ *CoinGecko API:* Failed to connect`);
+        Logger.error('CoinGecko test failed', error);
+      }
+
+      // Test 3: DexScreener
+      try {
+        // Use a known Solana token for testing (e.g., BONK)
+        const testAddress = 'DezXAZ8z7PnrnRJjz3wXBoRgixCa6xjnB7YaB1pPB263';
+        const data = await dexScreener.getTokenData(testAddress);
+        if (data) {
+          results.push(`✅ *DexScreener API:* Connected`);
+          results.push(`   Test query successful`);
+        } else {
+          results.push(`⚠️ *DexScreener API:* Connected but no data`);
+        }
+      } catch (error) {
+        results.push(`❌ *DexScreener API:* Failed to connect`);
+        Logger.error('DexScreener test failed', error);
+      }
+
+      // Send results
+      const testMessage = `
+🧪 *API Connection Test Results*
+
+${results.join('\n')}
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+${results.filter(r => r.includes('✅')).length === 3 ? '✅ All systems operational!' : '⚠️ Some connections have issues'}
+      `;
+
+      await this.bot.sendMessage(chatId, testMessage, { parse_mode: 'Markdown' });
+      Logger.info('API connection test completed');
+    } catch (error) {
+      Logger.error('Test command failed', error);
+      await this.bot.sendMessage(chatId, '❌ Test failed. Check bot logs for details.', { parse_mode: 'Markdown' });
+    }
   }
 
   async sendOpportunityAlert(message: string): Promise<void> {

@@ -72,4 +72,17 @@ export function verifyPayment(token: string) {
   return payments.has(token);
 }
 
-export default { generatePowChallenge, verifyPow, createPayment, verifyPayment };
+/**
+ * Generate an adaptive-difficulty PoW challenge for AgentRegistry registration.
+ * Difficulty scales with registration rate to prevent burst Sybil attacks.
+ * Base d=16 (~10ms), scales to d=24 (~3s) at 100 reg/hour, cap d=28 (~40s).
+ */
+export function generateAgentRegistrationChallenge(registrationRate: number): PowChallenge {
+  const difficulty = Math.min(
+    16 + Math.floor(Math.log2(Math.max(1, registrationRate))),
+    28
+  );
+  return generatePowChallenge(difficulty);
+}
+
+export default { generatePowChallenge, verifyPow, createPayment, verifyPayment, generateAgentRegistrationChallenge };
